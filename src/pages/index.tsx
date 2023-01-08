@@ -1,6 +1,9 @@
 import { type NextPage } from "next";
-import { signIn, useSession } from "next-auth/react";
+import { useSession } from "next-auth/react";
 import Head from "next/head";
+import { LoggedOutBanner } from "../components/LoggedOutBanner";
+import { CreateTweet } from "../components/CreateTweet";
+import { Container } from "../components/Container";
 
 const Home: NextPage = () => {
   const { data: session } = useSession();
@@ -13,7 +16,9 @@ const Home: NextPage = () => {
       </Head>
       <div>
         {/* Disabled ESLint rule for promise check void return */}
-        <button onClick={() => signIn()}>Sign In</button>
+        <Container>
+          <CreateTweet />
+        </Container>
         <div>
           {session &&
             Object.entries(session as object).map(([key, value]) => (
@@ -23,6 +28,7 @@ const Home: NextPage = () => {
             ))}
           {/* <p>{JSON.stringify(session)}</p> */}
         </div>
+        <LoggedOutBanner />
       </div>
     </>
   );
