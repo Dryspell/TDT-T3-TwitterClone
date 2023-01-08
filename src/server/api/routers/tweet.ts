@@ -1,5 +1,5 @@
 import { tweetSchema } from "../../../components/CreateTweet";
-import { createTRPCRouter, publicProcedure, protectedProcedure } from "../trpc";
+import { createTRPCRouter, protectedProcedure } from "../trpc";
 
 export const tweetRouter = createTRPCRouter({
   create: protectedProcedure

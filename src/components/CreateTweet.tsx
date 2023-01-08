@@ -1,4 +1,5 @@
-import { FormEvent, useState } from "react";
+import type { FormEvent } from "react";
+import { useState } from "react";
 import { api } from "../utils/api";
 import { ZodError, z } from "zod";
 
@@ -48,7 +49,7 @@ export function CreateTweet() {
 
         <div className="mt-4 flex justify-end">
           <button
-            className="bg-primary rounded-md px-4 py-2 text-white"
+            className="rounded-md bg-primary px-4 py-2 text-white"
             type="submit"
           >
             Tweet
