@@ -2,8 +2,8 @@ import { type NextPage } from "next";
 import { useSession } from "next-auth/react";
 import Head from "next/head";
 import { LoggedOutBanner } from "../components/LoggedOutBanner";
-import { CreateTweet } from "../components/CreateTweet";
 import { Container } from "../components/Container";
+import { Timeline } from "../components/Timeline";
 
 const Home: NextPage = () => {
   const { data: session } = useSession();
@@ -17,7 +17,7 @@ const Home: NextPage = () => {
       <div>
         {/* Disabled ESLint rule for promise check void return */}
         <Container>
-          <CreateTweet />
+          <Timeline />
         </Container>
         <div>
           {session &&
