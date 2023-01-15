@@ -34,12 +34,12 @@ export const tweetRouter = createTRPCRouter({
       const { prisma } = ctx;
       const { cursor, limit } = input;
 
-      return await prisma.tweet.findMany({
+      const tweets = await prisma.tweet.findMany({
         orderBy: {
           createdAt: "desc",
         },
         cursor: cursor ? { id: cursor } : undefined,
-        take: limit,
+        take: limit + 1,
         include: {
           author: {
             select: {
@@ -50,5 +50,14 @@ export const tweetRouter = createTRPCRouter({
           },
         },
       });
+
+      let nextCursor: typeof cursor = null;
+
+      if (tweets.length > limit) {
+        const nextItem = tweets.pop() as (typeof tweets)[number];
+        nextCursor = nextItem.id;
+      }
+
+      return { tweets, nextCursor };
     }),
 });
