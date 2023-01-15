@@ -60,4 +60,56 @@ export const tweetRouter = createTRPCRouter({
 
       return { tweets, nextCursor };
     }),
+
+  vote: protectedProcedure
+    .input(
+      z.object({
+        tweetId: z.string(),
+        direction: z.number().min(-1).max(1).int().default(1),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const { prisma, session } = ctx;
+      const { tweetId, direction } = input;
+
+      const userId = session.user.id;
+
+      return prisma.vote.create({
+        data: {
+          tweet: {
+            connect: {
+              id: tweetId,
+            },
+          },
+          user: {
+            connect: {
+              id: userId,
+            },
+          },
+          direction,
+        },
+      });
+    }),
+
+  unvote: protectedProcedure
+    .input(
+      z.object({
+        tweetId: z.string(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const { prisma, session } = ctx;
+      const { tweetId } = input;
+
+      const userId = session.user.id;
+
+      return prisma.vote.delete({
+        where: {
+          tweetId_userId: {
+            tweetId,
+            userId,
+          },
+        },
+      });
+    }),
 });

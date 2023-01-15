@@ -5,6 +5,8 @@ import Image from "next/image";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
 import updateLocale from "dayjs/plugin/updateLocale";
+import { useEffect, useState } from "react";
+import { AiFillHeart } from "react-icons/ai";
 
 dayjs.extend(relativeTime);
 dayjs.extend(updateLocale);
@@ -27,11 +29,38 @@ dayjs.updateLocale("en", {
   },
 });
 
+const useScrollPosition = () => {
+  const [scrollPosition, setScrollPosition] = useState(0);
+
+  const handleScroll = () => {
+    const height =
+      document.documentElement.scrollHeight -
+      document.documentElement.clientHeight;
+    const windowScroll =
+      document.body.scrollTop || document.documentElement.scrollTop;
+
+    const scrolled = (windowScroll / height) * 100;
+    setScrollPosition(scrolled);
+  };
+
+  useEffect(() => {
+    window.addEventListener("scroll", handleScroll, { passive: true });
+
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+    };
+  }, []);
+  return scrollPosition;
+};
+
 export const Tweet = ({
   tweet,
 }: {
   tweet: RouterOutputs["tweet"]["timeline"]["tweets"][number];
 }) => {
+  const voteMutation = api.tweet.vote.useMutation().mutateAsync;
+  const unVoteMutation = api.tweet.unvote.useMutation().mutateAsync;
+
   return (
     <div className="mb-4 border-b-2 border-gray-500">
       <div className="flex p-2">
@@ -59,12 +88,28 @@ export const Tweet = ({
             <Typography>{tweet.text}</Typography>
           </div>
         </div>
+        <div className="mt-4 flex items-center p-2">
+          <AiFillHeart
+            // color="red"
+            size="1.5rem"
+            onClick={() => {
+              console.log("Liked Tweet");
+              voteMutation({ tweetId: tweet.id }).catch((err) =>
+                console.error(err)
+              );
+            }}
+          />
+          <span className="text-sm text-gray-500">{10}</span>
+        </div>
       </div>
     </div>
   );
 };
 
 export const Timeline = () => {
+  const scrollPosition = useScrollPosition();
+  // console.log({ scrollPosition });
+
   const { data, isLoading, hasNextPage, fetchNextPage, isFetching } =
     api.tweet.timeline.useInfiniteQuery(
       {},
@@ -72,6 +117,12 @@ export const Timeline = () => {
     );
 
   const tweets = data?.pages.flatMap((page) => page.tweets) ?? [];
+
+  useEffect(() => {
+    if (scrollPosition > 90 && !isFetching && hasNextPage) {
+      fetchNextPage().catch((err) => console.error(err));
+    }
+  }, [scrollPosition, isFetching, hasNextPage, fetchNextPage]);
 
   return (
     <div className="border-l-2 border-r-2 border-gray-500">
@@ -81,12 +132,11 @@ export const Timeline = () => {
       ) : (
         tweets?.map((tweet) => <Tweet key={tweet.id} tweet={tweet} />)
       )}
-      <button
-        onClick={() => fetchNextPage()}
-        disabled={!hasNextPage || isFetching}
-      >
-        Load Next Page
-      </button>
+      {!hasNextPage && !isLoading && (
+        <div className="items-center">
+          <Typography>No more items to load</Typography>
+        </div>
+      )}
     </div>
   );
 };
