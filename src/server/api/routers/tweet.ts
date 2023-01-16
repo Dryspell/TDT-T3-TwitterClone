@@ -33,6 +33,7 @@ export const tweetRouter = createTRPCRouter({
     .query(async ({ ctx, input }) => {
       const { prisma } = ctx;
       const { cursor, limit } = input;
+      const userId = ctx.session?.user?.id;
 
       const tweets = await prisma.tweet.findMany({
         orderBy: {
@@ -46,6 +47,15 @@ export const tweetRouter = createTRPCRouter({
               name: true,
               image: true,
               id: true,
+            },
+          },
+          votes: {
+            where: {
+              userId,
+            },
+            select: {
+              userId: true,
+              direction: true,
             },
           },
         },

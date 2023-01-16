@@ -7,6 +7,7 @@ import relativeTime from "dayjs/plugin/relativeTime";
 import updateLocale from "dayjs/plugin/updateLocale";
 import { useEffect, useState } from "react";
 import { AiFillHeart } from "react-icons/ai";
+import { TbArrowBigDown, TbArrowBigTop } from "react-icons/tb";
 
 dayjs.extend(relativeTime);
 dayjs.extend(updateLocale);
@@ -61,6 +62,10 @@ export const Tweet = ({
   const voteMutation = api.tweet.vote.useMutation().mutateAsync;
   const unVoteMutation = api.tweet.unvote.useMutation().mutateAsync;
 
+  // const upVotes = tweet.votes.filter((vote) => vote.direction > 0);
+  // const downVotes = tweet.votes.filter((vote) => vote.direction < 0);
+  const hasVoted = tweet.votes.length > 0;
+
   return (
     <div className="mb-4 border-b-2 border-gray-500">
       <div className="flex p-2">
@@ -89,16 +94,24 @@ export const Tweet = ({
           </div>
         </div>
         <div className="mt-4 flex items-center p-2">
+          <TbArrowBigTop />
           <AiFillHeart
-            // color="red"
+            color={hasVoted ? "red" : "gray"}
             size="1.5rem"
             onClick={() => {
               console.log("Liked Tweet");
+              if (hasVoted) {
+                unVoteMutation({ tweetId: tweet.id }).catch((err) =>
+                  console.error(err)
+                );
+                return;
+              }
               voteMutation({ tweetId: tweet.id }).catch((err) =>
                 console.error(err)
               );
             }}
           />
+          <TbArrowBigDown />
           <span className="text-sm text-gray-500">{10}</span>
         </div>
       </div>
