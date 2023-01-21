@@ -38,7 +38,7 @@ export function CreateTweet() {
     <>
       {error && <p>{JSON.stringify(error)}</p>}
       <form
-        className="mb-4 flex w-full flex-col rounded-md border-2 p-4"
+        className="mb-2 flex w-full flex-col rounded-md border-2 p-4"
         onSubmit={handleSubmit}
       >
         <textarea

@@ -9,7 +9,9 @@ import updateLocale from "dayjs/plugin/updateLocale";
 import { useEffect, useState } from "react";
 import { AiFillHeart } from "react-icons/ai";
 import { TbArrowBigDown, TbArrowBigTop } from "react-icons/tb";
-import type { QueryClient } from "@tanstack/react-query";
+import type { InfiniteData, QueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
+import { Session } from "@prisma/client";
 
 dayjs.extend(relativeTime);
 dayjs.extend(updateLocale);
@@ -68,54 +70,94 @@ const updateCache = ({
   };
   data: {
     userId: string;
+    direction: number;
   };
-  action: "Upvote" | "Downvote" | "Unvote";
+  action: "Vote" | "Unvote";
 }) => {
-  console.log("I'm an empty arrow");
+  client.setQueryData(
+    [
+      ["tweet", "timeline"],
+      {
+        input: {},
+        type: "infinite",
+      },
+    ],
+    (oldData) => {
+      console.log({ oldData });
+      const newData = oldData as InfiniteData<
+        RouterOutputs["tweet"]["timeline"]
+      >;
+
+      const newTweets = newData.pages.map((page) => {
+        return {
+          tweets: page.tweets.map((tweet) => {
+            if (tweet.id === variables.tweetId) {
+              return {
+                ...tweet,
+                votes:
+                  action === "Unvote"
+                    ? []
+                    : [{ userId: data.userId, direction: data.direction }],
+              };
+            }
+            return tweet;
+          }),
+        };
+      });
+
+      return {
+        ...newData,
+        pages: newTweets,
+      };
+    }
+  );
 };
 
 export const Tweet = ({
   tweet,
+  client,
+  userId,
 }: {
   tweet: RouterOutputs["tweet"]["timeline"]["tweets"][number];
+  client: QueryClient;
+  userId: Session["userId"];
 }) => {
-  const voteMutation = api.tweet.vote.useMutation().mutateAsync;
-  const unVoteMutation = api.tweet.unvote.useMutation().mutateAsync;
+  const voteMutation = api.tweet.vote.useMutation({
+    onSuccess: (data, variables) => {
+      updateCache({ client, data, variables, action: "Vote" });
+    },
+  }).mutateAsync;
+  const unVoteMutation = api.tweet.unvote.useMutation({
+    onSuccess: (data, variables) => {
+      updateCache({ client, data, variables, action: "Unvote" });
+    },
+  }).mutateAsync;
 
   // const upVotes = tweet.votes.filter((vote) => vote.direction > 0);
   // const downVotes = tweet.votes.filter((vote) => vote.direction < 0);
-  const hasVoted = tweet.votes.length > 0;
+  const myVote = tweet.votes.find((vote) => vote.userId === userId);
 
   return (
-    <div className="mb-4 border-b-2 border-gray-500">
-      <div className="flex p-2">
-        <div>
-          <Image
-            src={tweet.author.image || "/default-profile.png"}
-            alt={`${tweet.author.name || "Unknown User"} profile picture`}
-            width={48}
-            height={48}
-            className="rounded-full"
+    <div className="mb-2 border-b-2 border-gray-500">
+      <div className="flex p-1">
+        <div className="flex flex-col items-center p-2">
+          <TbArrowBigTop
+            color={myVote && myVote.direction > 0 ? "red" : "gray"}
+            size="1.5rem"
+            onClick={() => {
+              console.log("Liked Tweet");
+              if (myVote) {
+                unVoteMutation({ tweetId: tweet.id }).catch((err) =>
+                  console.error(err)
+                );
+                return;
+              }
+              voteMutation({ tweetId: tweet.id }).catch((err) =>
+                console.error(err)
+              );
+            }}
           />
-        </div>
-        <div className="ml-2">
-          <div className="flex items-center">
-            <Typography variant="h6">{tweet.author.name}</Typography>
-            <Typography
-              className="pl-2"
-              variant="subtitle1"
-              color="textSecondary"
-            >
-              {dayjs(tweet.createdAt).fromNow()}
-            </Typography>
-          </div>
-          <div>
-            <Typography>{tweet.text}</Typography>
-          </div>
-        </div>
-        <div className="mt-4 flex items-center p-2">
-          <TbArrowBigTop />
-          <AiFillHeart
+          {/* <AiFillHeart
             color={hasVoted ? "red" : "gray"}
             size="1.5rem"
             onClick={() => {
@@ -130,16 +172,57 @@ export const Tweet = ({
                 console.error(err)
               );
             }}
-          />
-          <TbArrowBigDown />
+          /> */}
           <span className="text-sm text-gray-500">{10}</span>
+          <TbArrowBigDown
+            color={myVote && myVote.direction < 0 ? "red" : "gray"}
+            size="1.5rem"
+            onClick={() => {
+              console.log("Liked Tweet");
+              if (myVote) {
+                unVoteMutation({ tweetId: tweet.id }).catch((err) =>
+                  console.error(err)
+                );
+                return;
+              }
+              voteMutation({ tweetId: tweet.id, direction: -1 }).catch((err) =>
+                console.error(err)
+              );
+            }}
+          />
+        </div>
+        <div className="ml-2">
+          <div className="flex items-center">
+            <div>
+              <Image
+                src={tweet.author.image || "/default-profile.png"}
+                alt={`${tweet.author.name || "Unknown User"} profile picture`}
+                width={48}
+                height={48}
+                className="rounded-full"
+              />
+            </div>
+            <Typography className="pl-2" variant="h6">
+              {tweet.author.name}
+            </Typography>
+            <Typography
+              className="pl-2"
+              variant="subtitle1"
+              color="textSecondary"
+            >
+              {dayjs(tweet.createdAt).fromNow()}
+            </Typography>
+          </div>
+          <div className="p-2">
+            <Typography>{tweet.text}</Typography>
+          </div>
         </div>
       </div>
     </div>
   );
 };
 
-export const Timeline = () => {
+export const Timeline = ({ userId }: { userId: string }) => {
   const scrollPosition = useScrollPosition();
   // console.log({ scrollPosition });
 
@@ -148,6 +231,8 @@ export const Timeline = () => {
       {},
       { getNextPageParam: (lastPage) => lastPage.nextCursor }
     );
+
+  const client = useQueryClient();
 
   const tweets = data?.pages.flatMap((page) => page.tweets) ?? [];
 
@@ -163,7 +248,9 @@ export const Timeline = () => {
       {isLoading ? (
         <div>Loading...</div>
       ) : (
-        tweets?.map((tweet) => <Tweet key={tweet.id} tweet={tweet} />)
+        tweets?.map((tweet) => (
+          <Tweet key={tweet.id} tweet={tweet} client={client} userId={userId} />
+        ))
       )}
       {!hasNextPage && !isLoading && (
         <div className="items-center">
