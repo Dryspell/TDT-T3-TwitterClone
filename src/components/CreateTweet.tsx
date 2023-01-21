@@ -17,7 +17,14 @@ export function CreateTweet() {
   const [tweetText, setTweetText] = useState("");
   const [error, setError] = useState("");
 
-  const { mutateAsync } = api.tweet.create.useMutation();
+  const utils = api.useContext();
+
+  const { mutateAsync } = api.tweet.create.useMutation({
+    onSuccess: () => {
+      setTweetText("");
+      utils.tweet.timeline.invalidate().catch((err) => console.log(err));
+    },
+  });
 
   const handleSubmit = async (e: FormEvent) => {
     console.log("Tweeting: ", tweetText);

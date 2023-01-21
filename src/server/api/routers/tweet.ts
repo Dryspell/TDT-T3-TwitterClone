@@ -26,14 +26,18 @@ export const tweetRouter = createTRPCRouter({
   timeline: publicProcedure
     .input(
       z.object({
+        where: z
+          .object({
+            author: z.object({ name: z.string().optional() }).optional(),
+          })
+          .optional(),
         cursor: z.string().nullish(),
         limit: z.number().min(1).max(100).default(10),
       })
     )
     .query(async ({ ctx, input }) => {
       const { prisma } = ctx;
-      const { cursor, limit } = input;
-      const userId = ctx.session?.user?.id;
+      const { cursor, limit, where } = input;
 
       const tweets = await prisma.tweet.findMany({
         orderBy: {
@@ -41,6 +45,7 @@ export const tweetRouter = createTRPCRouter({
         },
         cursor: cursor ? { id: cursor } : undefined,
         take: limit + 1,
+        where,
         include: {
           author: {
             select: {
@@ -50,14 +55,19 @@ export const tweetRouter = createTRPCRouter({
             },
           },
           votes: {
-            where: {
-              userId,
-            },
+            // where: {
+            //   userId: ctx.session?.user?.id;
+            // },
             select: {
               userId: true,
               direction: true,
             },
           },
+          // _count: {
+          //   select: {
+          //     votes: { where: { direction: 1 } },
+          //   },
+          // },
         },
       });
 
@@ -84,8 +94,14 @@ export const tweetRouter = createTRPCRouter({
 
       const userId = session.user.id;
 
-      return prisma.vote.create({
-        data: {
+      return prisma.vote.upsert({
+        where: {
+          tweetId_userId: {
+            tweetId,
+            userId,
+          },
+        },
+        create: {
           tweet: {
             connect: {
               id: tweetId,
@@ -98,6 +114,7 @@ export const tweetRouter = createTRPCRouter({
           },
           direction,
         },
+        update: { direction },
       });
     }),
 
