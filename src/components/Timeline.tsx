@@ -1,5 +1,6 @@
 import { Typography } from "@mui/material";
-import { RouterOutputs, api } from "../utils/api";
+import type { RouterOutputs } from "../utils/api";
+import { api } from "../utils/api";
 import { CreateTweet } from "./CreateTweet";
 import Image from "next/image";
 import dayjs from "dayjs";
@@ -8,6 +9,7 @@ import updateLocale from "dayjs/plugin/updateLocale";
 import { useEffect, useState } from "react";
 import { AiFillHeart } from "react-icons/ai";
 import { TbArrowBigDown, TbArrowBigTop } from "react-icons/tb";
+import type { QueryClient } from "@tanstack/react-query";
 
 dayjs.extend(relativeTime);
 dayjs.extend(updateLocale);
@@ -52,6 +54,24 @@ const useScrollPosition = () => {
     };
   }, []);
   return scrollPosition;
+};
+
+const updateCache = ({
+  client,
+  variables,
+  data,
+  action,
+}: {
+  client: QueryClient;
+  variables: {
+    tweetId: string;
+  };
+  data: {
+    userId: string;
+  };
+  action: "Upvote" | "Downvote" | "Unvote";
+}) => {
+  console.log("I'm an empty arrow");
 };
 
 export const Tweet = ({
